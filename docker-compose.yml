@@ -1,0 +1,89 @@
+version: '3.8'
+
+networks:
+  proxy_network:
+    external: true
+
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    networks:
+      - proxy_network
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    environment:
+      - CLUSTER_NAME=tugas-cluster
+    env_file:
+      - ./hadoop.env
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode1
+    hostname: datanode1
+    networks:
+      - proxy_network
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    env_file:
+      - ./hadoop.env
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    hostname: datanode2
+    networks:
+      - proxy_network
+    depends_on:
+      - namenode
+    ports:
+      - "9865:9864"
+    env_file:
+      - ./hadoop.env
+
+  datanode3:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode3
+    hostname: datanode3
+    networks:
+      - proxy_network
+    depends_on:
+      - namenode
+    ports:
+      - "9866:9864"
+    env_file:
+      - ./hadoop.env
+
+  spark:
+    image: apache/spark:3.5.1-python3
+    container_name: spark
+    hostname: spark
+    networks:
+      - proxy_network
+    ports:
+      - "9867:8080"   # Spark Master Web UI
+      - "7077:7077"   # Spark Master Port
+      - "4040:4040"   # Spark Application Web UI
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    volumes:
+      - ./spark-work:/spark-work
+    depends_on:
+      - namenode
+
+  spark-worker:
+    image: apache/spark:3.5.1-python3
+    container_name: spark-worker
+    hostname: spark-worker
+    networks:
+      - proxy_network
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark:7077
+    volumes:
+      - ./spark-work:/spark-work
+    depends_on:
+      - spark
